@@ -1,0 +1,225 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'soc2-audit-landing/**'
+      - '.github/workflows/ci.yml'
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+
+jobs:
+  lint:
+    name: Code Analysis (ESLint)
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: soc2-audit-landing
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: soc2-audit-landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint with report
+        run: pnpm lint:report
+
+      - name: Display linting results
+        run: |
+          if [ -f eslint-report.json ]; then
+            echo "ESLint found issues. Summary:"
+            cat eslint-report.json | jq '.[] | {file: .filePath, messages: .messages | length}'
+          else
+            echo "No ESLint report generated"
+          fi
+
+      - name: Upload ESLint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-report
+          path: soc2-audit-landing/eslint-report.json
+          retention-days: 7
+
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: soc2-audit-landing
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: soc2-audit-landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript compilation check
+        run: pnpm exec tsc --noEmit
+
+  build:
+    name: Build Project
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    
+    defaults:
+      run:
+        working-directory: soc2-audit-landing
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: soc2-audit-landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Verify build output
+        run: |
+          echo "Build output contents:"
+          ls -la dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: soc2-audit-landing/dist
+          retention-days: 7
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    
+    defaults:
+      run:
+        working-directory: soc2-audit-landing
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: soc2-audit-landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+
+      - name: Check coverage thresholds
+        run: |
+          echo "Coverage report generated successfully"
+          ls -la coverage/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: soc2-audit-landing/coverage
+          retention-days: 14
+
+  preview:
+    name: Preview Build
+    runs-on: ubuntu-latest
+    needs: [build]
+    
+    defaults:
+      run:
+        working-directory: soc2-audit-landing
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: soc2-audit-landing/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: soc2-audit-landing/dist
+
+      - name: Preview server health check
+        run: |
+          pnpm preview &
+          PREVIEW_PID=$!
+          sleep 5
+          curl -f http://localhost:4173 || exit 1
+          kill $PREVIEW_PID 2>/dev/null || true

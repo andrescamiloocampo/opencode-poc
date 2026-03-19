@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# CI/CD artifacts
+coverage/
+eslint-report.json
+test-results/
