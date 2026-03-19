@@ -1,0 +1,90 @@
+.wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+@media (min-width: 1024px) {
+  .wrapper {
+    flex-direction: row;
+    text-align: left;
+    gap: var(--spacing-6);
+  }
+}
+
+.stepNumber {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--spacing-4);
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2) 0%, rgba(8, 145, 178, 0.15) 100%);
+  border: 2px solid var(--color-accent-primary);
+  border-radius: 50%;
+  color: var(--color-accent-primary);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+@media (min-width: 1024px) {
+  .stepNumber {
+    margin-bottom: 0;
+  }
+}
+
+.stepNumber svg {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+}
+
+.stepNumberText {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  z-index: 2;
+}
+
+.content {
+  flex: 1;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-2);
+}
+
+.description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  max-width: 400px;
+}
+
+.connector {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .connector {
+    display: block;
+    position: absolute;
+    top: 32px;
+    left: calc(100% + var(--spacing-4));
+    width: calc(100% - 64px);
+    height: 2px;
+    background: linear-gradient(90deg, var(--color-accent-primary), transparent);
+    z-index: 0;
+  }
+}
+
+.isLast .connector {
+  display: none;
+}
